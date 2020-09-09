@@ -27,7 +27,7 @@ namespace AzureBackupTool
         }
         public virtual DbSet<DMSServiceInfo> DMSServiceInfo { get; set; }
         public virtual DbSet<ExceptionLog> ExceptionLogs { get; set; }
-
+        public virtual DbSet<AzureBackupLogs> AzureBackupLogs { get; set; }
 
     }
 }

@@ -35,5 +35,6 @@ namespace AzureBackupTool.Models
         [Required]
         public Boolean IsReplication { get; set; } = false;
         public Boolean IsDeleted { get; set; } = false;
+        public Boolean WantBackup { get; set; } = true;
     }
 }

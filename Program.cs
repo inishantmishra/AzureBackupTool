@@ -24,7 +24,7 @@ namespace AzureBackupTool
             // Set up configuration sources.
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Path.Combine(AppContext.BaseDirectory))
-                .AddJsonFile("appsettings.json", optional: true);
+                .AddJsonFile("appSettings.json", optional: true);
 
             Configuration = builder.Build();
             
@@ -44,7 +44,7 @@ namespace AzureBackupTool
             {
                 IList<DMSServiceInfo> dmsServiceList = new List<DMSServiceInfo>();
                 dmsServiceList = context.DMSServiceInfo.AsNoTracking()
-                                 .Where(x => x.AzStorageConnectionString != null && !x.IsDeleted)
+                                 .Where(x => x.AzStorageConnectionString != null && !x.IsDeleted && x.WantBackup)
                                  .ToList();
 
                 string destinationConnectionString = Configuration.GetSection("GenericStorageSettings:ConnectionString").Value;
@@ -54,6 +54,7 @@ namespace AzureBackupTool
                 //Create Containers if destination does not have
                 foreach (var service in dmsServiceList)
                 {
+                    service.AzStorageContainer = service.AzStorageContainer.ToLower();
                     if (destContainers.Where(b => b.Name == service.AzStorageContainer).Count() == 0)
                     {
                         destBlobClient.CreateBlobContainer(service.AzStorageContainer);
@@ -80,7 +81,7 @@ namespace AzureBackupTool
 
                     try
                     {
-                        ExecuteBackup(service, sourceContainerClient, destContainerClient).ConfigureAwait(false);
+                        ExecuteBackup(context,service, sourceContainerClient, destContainerClient).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
@@ -116,12 +117,15 @@ namespace AzureBackupTool
                 }
         }
 
-        public static async Task ExecuteBackup(DMSServiceInfo service, BlobContainerClient sourceContainerClient, BlobContainerClient destContainerClient)
+        public static async Task ExecuteBackup(AppDBContext context,DMSServiceInfo service, BlobContainerClient sourceContainerClient, BlobContainerClient destContainerClient)
         {
             
             var blobList = sourceContainerClient.GetBlobs().ToList();
             bool dailyBackup = Configuration.GetSection("ScheduleSettings:Daily").Value.ToLower() == "true" ? true : false;
             bool weeklyBackup = Configuration.GetSection("ScheduleSettings:Weekly").Value.ToLower() == "true" ? true : false;
+
+            int dailyCounter = 0;
+            int weeklyCounter = 0;
             foreach (var blob in blobList)
             {
                 BlobClient sourceBlob = sourceContainerClient.GetBlobClient(blob.Name);
@@ -130,14 +134,37 @@ namespace AzureBackupTool
                     BlobClient destBlob = destContainerClient.GetBlobClient("Daily/" + blob.Name);
                     // Start the copy operation.
                     destBlob.StartCopyFromUri(sourceBlob.Uri);
+                    dailyCounter = dailyCounter + 1;
                 }
                 if(weeklyBackup)
                 {
                     BlobClient destBlob = destContainerClient.GetBlobClient("Weekly/" + blob.Name);
                     // Start the copy operation.
                     destBlob.StartCopyFromUri(sourceBlob.Uri);
+                    weeklyCounter = weeklyCounter + 1;
                 }
             }
+
+            if (dailyBackup)
+            {
+                AzureBackupLogs log = new AzureBackupLogs();
+                log.Category = "Daily";
+                log.ContainerName = service.AzStorageContainer;
+                log.NoOfBackupFiles = dailyCounter;
+                log.DMSServiceInfoId = service.Id;
+                context.AzureBackupLogs.Add(log);
+            }
+            if(weeklyBackup)
+            {
+                AzureBackupLogs log = new AzureBackupLogs();
+                log.Category = "Weekly";
+                log.ContainerName = service.AzStorageContainer;
+                log.NoOfBackupFiles = weeklyCounter;
+                log.DMSServiceInfoId = service.Id;
+                context.AzureBackupLogs.Add(log);
+            }
+            context.SaveChanges();
+                    
         }
     }
 }
