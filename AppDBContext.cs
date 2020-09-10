@@ -23,7 +23,8 @@ namespace AzureBackupTool
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             
-            optionsBuilder.UseNpgsql(_Config.GetConnectionString("DefaultConnection"));
+            optionsBuilder.UseNpgsql(_Config.GetConnectionString("DefaultConnection"),
+                options=>options.EnableRetryOnFailure());
         }
         public virtual DbSet<DMSServiceInfo> DMSServiceInfo { get; set; }
         public virtual DbSet<ExceptionLog> ExceptionLogs { get; set; }

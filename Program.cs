@@ -71,8 +71,15 @@ namespace AzureBackupTool
                     {
                         ExceptionLog log = new ExceptionLog();
                         log.DMSServiceInfoId = service.Id;
-                        log.InnerException = ex.InnerException.ToString();
-                        log.StackTrace = ex.StackTrace.ToString();
+                        if (ex.InnerException == null)
+                            log.InnerException = string.Empty;
+                        else
+                            log.InnerException = ex.InnerException.Message;
+
+                        if (ex.StackTrace == null)
+                            log.StackTrace = string.Empty;
+                        else
+                            log.StackTrace = ex.StackTrace.ToString();
                         log.ExceptionMessage = "Error Executing while Backup- Deleting old files:: "+ ex.Message.ToString();
                         context.ExceptionLogs.Add(log);
                         context.SaveChanges();
@@ -87,8 +94,15 @@ namespace AzureBackupTool
                     {
                         ExceptionLog log = new ExceptionLog();
                         log.DMSServiceInfoId = service.Id;
-                        log.InnerException = ex.InnerException.ToString();
-                        log.StackTrace = ex.StackTrace.ToString();
+                        if (ex.InnerException == null)
+                            log.InnerException = string.Empty;
+                        else
+                            log.InnerException = ex.InnerException.Message;
+
+                        if (ex.StackTrace == null)
+                            log.StackTrace = string.Empty;
+                        else
+                            log.StackTrace = ex.StackTrace.ToString();
                         log.ExceptionMessage = "Error Executing while Backup- Executing Backup:: " + ex.Message.ToString();
                         context.ExceptionLogs.Add(log);
                         context.SaveChanges();
